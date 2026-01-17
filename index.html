@@ -1,0 +1,566 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Credit Card Rewards Cheat Sheet</title>
+  <style>
+    :root {
+      --pts-color: #2a6fcd;
+      --cash-color: #2c8c57;
+      --mix-color: #8c2cad;
+      --bonus-bg: #fff4e5;
+      --header-bg: #f4f4f4;
+      --table-head: #ececec;
+      --text-muted: #555;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      margin: 24px;
+      background: white;
+      color: #222;
+      line-height: 1.4;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 24px;
+    }
+
+    .muted {
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+
+    .card {
+      border-radius: 10px;
+      padding: 14px;
+      margin-top: 12px;
+      border: 1px solid #ccc;
+    }
+
+    .card-header {
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 8px;
+      padding: 8px;
+      border-radius: 6px;
+      background: var(--header-bg);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+    }
+
+    th,
+    td {
+      padding: 8px;
+      border-bottom: 1px solid #ddd;
+    }
+
+    th {
+      background: var(--table-head);
+      text-transform: uppercase;
+      font-size: 12px;
+    }
+
+    .pill {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      margin-right: 6px;
+      color: white;
+    }
+
+    .pill-points {
+      background: var(--pts-color);
+    }
+
+    .pill-cash {
+      background: var(--cash-color);
+    }
+
+    .pill-mix {
+      background: var(--mix-color);
+    }
+
+    .bonus-section {
+      background: var(--bonus-bg);
+      border: 1px solid #f1c27d;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 260px;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #c5c5c5;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    select,
+    button {
+      padding: 7px 10px;
+      border-radius: 6px;
+      border: 1px solid #bbb;
+      background: white;
+      font-size: 14px;
+    }
+
+    button:hover {
+      border-color: #888;
+      cursor: pointer;
+    }
+
+    .controls {
+      margin-top: 10px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .small {
+      font-size: 12px;
+    }
+
+    hr {
+      border: 0;
+      border-top: 1px solid #e5e5e5;
+      margin: 12px 0;
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <h1>Credit Card Rewards Cheat Sheet</h1>
+    <div class="muted">Last updated: <span id="lastUpdated"></span></div>
+  </header>
+
+  <div>
+    <main class="card">
+      <div class="card-header">Best Card by Category</div>
+
+      <div class="controls">
+        <label>
+          Category:
+          <select id="categorySelect">
+            <option value="All Categories">All Categories</option>
+          </select>
+        </label>
+        <label>
+          Preference:
+          <select id="prefSelect">
+            <option value="either">Either</option>
+            <option value="points">Points/Miles</option>
+            <option value="cash">Cash Back</option>
+          </select>
+        </label>
+      </div>
+
+      <div id="bestResult" style="margin-top:12px;"></div>
+
+      <div class="card bonus-section" style="margin-top:18px;">
+        <div class="card-header">Current Quarter Bonuses</div>
+        <div id="quarterlyBonuses"></div>
+      </div>
+
+      <div style="margin-top:18px;" class="card-header">Cards & Earnings (with Annual Fee)</div>
+      <div id="cardsList"></div>
+    </main>
+  </div>
+
+  <script>
+    // =====================
+    // DATA (from your file, with minimal corrections)
+    // =====================
+    const DEFAULT_DATA = {
+      lastUpdatedISO: new Date().toISOString(),
+      categories: [
+        "Travel (portal)",
+        "Dining",
+        "Drugstores",
+        "Lyft Rides",
+        "Flights",
+        "Everything Else",
+        "Grocery Stores",
+        "Entertainment",
+        "Streaming Services",
+        "Home Improvement & Furnishings"
+      ],
+      quarterlyRotating: {
+        "2026-Q1": [
+          {
+            program: "Discover it Cash Back (5% rotating)",
+            requiresActivation: true,
+            cap: "$1,500 per quarter",
+            categories: [
+              "Grocery Stores",
+              "Wholesale Clubs",
+              "Streaming Services"
+            ],
+            notes: ""
+          },
+          {
+            program: "Freedom Unlimited (quarter tracking)",
+            requiresActivation: false,
+            cap: "$75 per quarter",
+            categories: [
+              "Dining",
+              "Norwegian Cruise Line",
+              "American Heart Associate"
+            ],
+            notes: ""
+          }
+        ]
+      },
+      cards: [
+        {
+          name: "Bilt Blue (Card 2.0)",
+          annualFee: 0,
+          currency: "mixed",
+          notes: "1x Bilt Points + 4% Bilt Cash; points options on rent.",
+          rates: {
+            "Everything Else": "1x points + 4% Bilt Cash"
+          }
+        },
+        {
+          name: "Capital One Venture X Rewards",
+          annualFee: 395,
+          currency: "points",
+          notes: "10x hotels/cars; 5x flights/vacation rentals via Capital One Travel; 2x others.",
+          rates: {
+            "Travel (portal)": "10x hotels & cars / 5x flights",
+            "Flights": "5x (via Capital One Travel)",
+            "Everything Else": "2x"
+          }
+        },
+        {
+          name: "Chase Freedom Unlimited",
+          annualFee: 0,
+          currency: "points",
+          // corrected the in-card rates to match your latest note: 5 on categories, 2 Lyft, and baseline earn
+          notes: "2% Lyft rides (promo); 1% other.",
+          rates: {
+            "Dining": "5x",
+            "Norwegian Cruise Line": "5x",
+            "American Heart Associate": "5x",
+            "Everything Else": "1x",
+            "Lyft Rides": "2x"
+          }
+        },
+        {
+          name: "Capital One Savor",
+          annualFee: 0,
+          currency: "cash",
+          notes: "3% dining, groceries, entertainment, streaming; 1% others.",
+          rates: {
+            "Dining": "3%",
+            "Grocery Stores": "3%",
+            "Entertainment": "3%",
+            "Streaming Services": "3%",
+            "Everything Else": "1%"
+          }
+        },
+        {
+          name: "American Express Platinum",
+          annualFee: 895,
+          currency: "points",
+          notes: "5x flights & prepaid hotels via AmEx Travel; 1x others.",
+          rates: {
+            "Flights": "5x",
+            "Travel (portal)": "5x (prepaid via AmExTravel)",
+            "Everything Else": "1x"
+          }
+        },
+        {
+          name: "Chase Sapphire Preferred",
+          annualFee: 95,
+          currency: "points",
+          notes: "5x portal travel; 3x dining & online groceries; 2x other travel; 1x others.",
+          rates: {
+            "Travel (portal)": "5x",
+            "Dining": "3x",
+            "Travel": "2x",
+            "Streaming Services": "3x",
+            "Lyft Rides": "5x",
+            "Everything Else": "1x"
+          }
+        },
+        {
+          name: "Discover it Cash Back",
+          annualFee: 0,
+          currency: "cash",
+          notes: "5% rotating categories (up to $1,500 per quarter with activation); 1% others.",
+          rates: {
+            "Grocery Stores": "5%",
+            "Wholesale Clubs": "5%",
+            "Streaming Services": "5%",
+            "Everything Else": "1%"
+          }
+        },
+        {
+          name: "American Express Gold",
+          annualFee: 325,
+          currency: "points",
+          notes: "4x restaurants; 4x U.S. supermarkets; 3x flights; 2x prepaid hotels via AmExTravel; 1x others.",
+          rates: {
+            "Dining": "4x",
+            "Grocery Stores": "4x (up to cap)",
+            "Flights": "3x",
+            "Travel (portal)": "2x (prepaid hotels)",
+            "Everything Else": "1x"
+          }
+        },
+        {
+          name: "Bank of America Customized Cash Rewards",
+          annualFee: 0,
+          currency: "cash",
+          notes: "3% on Home Improvement & Furnishings (selected category); 2% grocery stores and wholesale clubs; 1% on all other purchases. Category choice can be changed monthly.",
+          rates: {
+            "Home Improvement & Furnishings": "3%",
+            "Grocery Stores": "2%",
+            "Wholesale Clubs": "2%",
+            "Everything Else": "1%"
+          }
+        }
+      ]
+    };
+
+    // In-memory working copy
+    let data = structuredClone(DEFAULT_DATA);
+
+    // =====================
+    // Helpers
+    // =====================
+    function currentQuarter(d = new Date()) {
+      const y = d.getFullYear();
+      const q = Math.floor(d.getMonth() / 3) + 1;
+      return `${y}-Q${q}`;
+    }
+
+    function nextQuarter(d = new Date()) {
+      const copy = new Date(d);
+      const startNext = copy.setMonth((Math.floor(d.getMonth() / 3) + 1) * 3);
+      const nDate = new Date(startNext);
+      return `${nDate.getFullYear()}-Q${Math.floor(nDate.getMonth() / 3) + 1}`;
+    }
+
+    function scoreRate(r) {
+      const mx = r.match(/(\d+(\.\d+)?)\s*x/i);
+      const mp = r.match(/(\d+(\.\d+)?)\s*%/);
+      return Math.max(mx ? +mx[1] : 0, mp ? +mp[1] : 0);
+    }
+
+    function bestCardForCategory(category, pref) {
+      const arr = [];
+      data.cards.forEach(c => {
+        if (category === "All Categories") return;
+        const val = c.rates[category] || null;
+        if (!val) return;
+        if (pref === "points" && c.currency === "cash") return;
+        if (pref === "cash" && c.currency === "points") return;
+        arr.push({ card: c, rate: val, score: scoreRate(val) });
+      });
+      return arr.sort((a, b) => b.score - a.score);
+    }
+
+    function escapeHtml(s) {
+      return String(s)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    // =====================
+    // Rendering
+    // =====================
+    function populateCategorySelect() {
+      const sel = document.getElementById("categorySelect");
+      const current = sel.value || "All Categories";
+
+      sel.innerHTML = "";
+      const allOpt = document.createElement("option");
+      allOpt.value = "All Categories";
+      allOpt.textContent = "All Categories";
+      sel.appendChild(allOpt);
+
+      data.categories.forEach(cat => {
+        const opt = document.createElement("option");
+        opt.value = cat;
+        opt.textContent = cat;
+        sel.appendChild(opt);
+      });
+
+      // restore selection if possible
+      sel.value = [...sel.options].some(o => o.value === current) ? current : "All Categories";
+    }
+
+    function renderQuarterly() {
+      const curr = currentQuarter();
+      const nxt = nextQuarter();
+      const container = document.getElementById("quarterlyBonuses");
+      container.innerHTML = "";
+      [curr, nxt].forEach(q => {
+        const items = data.quarterlyRotating[q] || [];
+        const sect = document.createElement("div");
+        sect.innerHTML = `<div class="muted" style="font-size:14px;"><b>${q}</b></div>`;
+        if (!items.length) {
+          sect.innerHTML += `<div class="muted">No data for ${q}.</div>`;
+        } else {
+          items.forEach(it => {
+            const box = document.createElement("div");
+            box.className = "card bonus-section";
+            box.style.marginTop = "8px";
+
+            const pillClass = it.program.toLowerCase().includes("venture")
+              ? "pill-points"
+              : it.program.toLowerCase().includes("freedom")
+                ? "pill-cash"
+                : "pill-cash";
+
+            box.innerHTML = `
+          <div>
+            <span class="pill ${pillClass}">${escapeHtml(it.program)}</span>
+            ${it.requiresActivation ? '<span class="pill pill-mix">Activation Required</span>' : ''}
+          </div>
+          <div class="muted" style="font-size:12px; margin-top:4px;">Cap: ${escapeHtml(it.cap || "—")}</div>
+          <table>
+            <thead><tr><th>Categories</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr>
+                <td>${(it.categories || []).map(c => escapeHtml(c)).join("<br>")}</td>
+                <td>${escapeHtml(it.notes || "")}</td>
+              </tr>
+            </tbody>
+          </table>
+        `;
+
+            sect.appendChild(box);
+          });
+        }
+        container.appendChild(sect);
+      });
+    }
+
+    function renderBest() {
+      const cat = document.getElementById("categorySelect").value;
+      const pref = document.getElementById("prefSelect").value;
+
+      if (cat === "All Categories") {
+        document.getElementById("bestResult").innerHTML = "";
+        renderCards();
+        return;
+      }
+
+      const list = bestCardForCategory(cat, pref);
+      const out = document.getElementById("bestResult");
+
+      if (!list.length) {
+        out.innerHTML = `<div class="muted">No match for “${escapeHtml(cat)}”.</div>`;
+        return;
+      }
+
+      const top = list[0];
+      const others = list.slice(1);
+
+      out.innerHTML = `
+    <div class="card" style="border-color:${top.card.currency === "points" ? "var(--pts-color)" : top.card.currency === "cash" ? "var(--cash-color)" : "var(--mix-color)"};">
+      <div>
+        <span class="pill ${top.card.currency === "points" ? "pill-points" : top.card.currency === "cash" ? "pill-cash" : "pill-mix"}">${escapeHtml(top.card.name)}</span>
+      </div>
+      <div style="margin-top:6px;">Earn: <strong>${escapeHtml(top.rate)}</strong></div>
+      <div class="muted">Annual Fee: $${escapeHtml(top.card.annualFee)}</div>
+      <div class="muted" style="margin-top:6px;">${escapeHtml(top.card.notes || "")}</div>
+    </div>
+    ${others.length ? `
+      <div class="muted" style="margin-top:8px;">Also good:</div>
+      <table>
+        <thead><tr><th>Card</th><th>Rate</th><th>Fee</th></tr></thead>
+        <tbody>
+          ${others.map(o => `<tr><td>${escapeHtml(o.card.name)}</td><td>${escapeHtml(o.rate)}</td><td>$${escapeHtml(o.card.annualFee)}</td></tr>`).join("")}
+        </tbody>
+      </table>
+    ` : ""}
+  `;
+
+      // Keep the full card list visible beneath
+      renderCards();
+    }
+
+    function renderCards() {
+      const list = document.getElementById("cardsList");
+      list.innerHTML = "";
+
+      data.cards.forEach(c => {
+        const borderColor = c.currency === "points" ? "var(--pts-color)" : c.currency === "cash" ? "var(--cash-color)" : "var(--mix-color)";
+        const div = document.createElement("div");
+        div.className = "card";
+        div.style.borderColor = borderColor;
+        div.innerHTML = `
+      <div><strong>${escapeHtml(c.name)}</strong></div>
+      <div class="muted">Annual Fee: $${escapeHtml(c.annualFee)}</div>
+      <div class="muted" style="margin-top:4px;">${escapeHtml(c.notes || "")}</div>
+      <table>
+        <thead><tr><th>Category</th><th>Earn</th></tr></thead>
+        <tbody>
+          ${Object.entries(c.rates || {}).map(([k, v]) => `<tr><td>${escapeHtml(k)}</td><td>${escapeHtml(v)}</td></tr>`).join("")}
+        </tbody>
+      </table>
+    `;
+        list.appendChild(div);
+      });
+    }
+
+    function renderAll() {
+      document.getElementById("lastUpdated").textContent = new Date(data.lastUpdatedISO).toLocaleString();
+      populateCategorySelect();
+      renderQuarterly();
+      renderBest();
+    }
+
+    // =====================
+    // Editor logic (CURRENT QUARTER ONLY)
+    // =====================
+    function getCurrentQuarterArray() {
+      const key = currentQuarter();
+      return data.quarterlyRotating[key] || [];
+    }
+
+    function setCurrentQuarterArray(arr) {
+      const key = currentQuarter();
+      if (!data.quarterlyRotating) data.quarterlyRotating = {};
+      data.quarterlyRotating[key] = arr;
+      data.lastUpdatedISO = new Date().toISOString();
+    }
+
+    // =====================
+    // Wire up events
+    // =====================
+    document.getElementById("categorySelect").addEventListener("change", renderBest);
+    document.getElementById("prefSelect").addEventListener("change", renderBest);
+
+    // Initial render
+    renderAll();
+  </script>
+</body>
+
+</html>
